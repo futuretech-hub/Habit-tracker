@@ -1,0 +1,35 @@
+name: Build Android APK
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Create Expo project and add app files
+        run: |
+          unzip -q habit-tracker.zip
+          npx --yes create-expo-app@latest app --template blank --no-install
+          cp -r habit-tracker/src app/src
+          cp habit-tracker/App.js app/App.js
+          cp habit-tracker/app.json app/app.json
+          cd app
+          npm install
+          npx expo install @react-native-async-storage/async-storage react-native-safe-area-context expo-status-bar
+      - name: Generate Android project
+        working-directory: app
+        run: npx expo prebuild --platform android
+      - name: Build APK
+        working-directory: app/android
+        run: ./gradlew assembleRelease
+      - uses: actions/upload-artifact@v4
+        with:
+          name: habit-tracker-apk
+          path: app/android/app/build/outputs/apk/release/app-release.apk
